@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPA Calculator • Academic Performance Tracker</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', system_ui, sans-serif;
+        }
+        .glass {
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(16px);
+        }
+        .grade-select {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .grade-select:focus {
+            box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.3);
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-indigo-600 via-blue-600 to-violet-600 min-h-screen py-8">
+    <div class="max-w-4xl mx-auto px-6">
+        <!-- Header -->
+        <div class="text-center mb-10 text-white">
+            <div class="inline-flex items-center gap-3 bg-white/10 backdrop-blur-md px-6 py-2 rounded-3xl mb-4">
+                <span class="text-3xl">🎓</span>
+                <h1 class="text-4xl font-bold tracking-tight">GPA Calculator</h1>
+            </div>
+            <p class="text-blue-100 text-lg">10-Point Scale • Fixed Semester Subjects</p>
+        </div>
+
+        <div class="glass shadow-2xl rounded-3xl overflow-hidden border border-white/20">
+            <!-- Input Section -->
+            <div class="p-8">
+                <div class="flex justify-between items-center mb-8">
+                    <h2 class="text-2xl font-semibold text-gray-800">Enter Your Grades</h2>
+                    <button onclick="resetAll()" 
+                            class="px-5 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-2xl transition">
+                        Reset All
+                    </button>
+                </div>
+
+                <div id="coursesContainer" class="space-y-4">
+                    <!-- Populated by JS -->
+                </div>
+
+                <div class="mt-10 bg-white rounded-3xl p-8 border border-gray-100">
+                    <div class="grid grid-cols-3 gap-8 text-center">
+                        <div>
+                            <p class="text-gray-500 text-sm">Total Credits</p>
+                            <p id="totalCredits" class="text-5xl font-bold text-indigo-600 mt-2">27</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-500 text-sm">Total Points</p>
+                            <p id="totalPoints" class="text-5xl font-bold text-gray-800 mt-2">0</p>
+                        </div>
+                        <div>
+                            <p class="text-gray-500 text-sm">GPA</p>
+                            <p id="gpaDisplay" class="text-5xl font-bold text-emerald-600 mt-2">0.00</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="bg-gray-50 border-t px-8 py-6 flex flex-col sm:flex-row gap-4">
+                <button onclick="calculateGPA()" 
+                        class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-4 rounded-2xl transition text-lg">
+                    📊 Calculate GPA
+                </button>
+                <button onclick="generatePDF()" 
+                        class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-4 rounded-2xl transition text-lg">
+                    📄 Download PDF Report
+                </button>
+            </div>
+        </div>
+
+        <!-- Share Section -->
+        <div class="mt-8 bg-white/10 backdrop-blur-md border border-white/30 rounded-3xl p-6 text-white">
+            <p class="text-center mb-3 text-sm opacity-90">Share your GPA calculation</p>
+            <div class="flex justify-center gap-4">
+                <button onclick="copyLink()" 
+                        class="px-6 py-3 bg-white/20 hover:bg-white/30 rounded-2xl transition flex items-center gap-2">
+                    🔗 Copy Link
+                </button>
+            </div>
+            <p id="shareUrl" class="text-xs text-center mt-4 break-all opacity-75 font-mono"></p>
+        </div>
+
+        <div class="text-center mt-10">
+            <p onclick="window.open('https://github.com', '_blank')" 
+               class="text-white/70 text-sm cursor-pointer hover:text-white transition">
+                Made for academic excellence • Share your results
+            </p>
+        </div>
+    </div>
+
+    <!-- Results Area for PDF (hidden on screen) -->
+    <div id="pdfContent" class="hidden">
+        <div class="p-10 bg-white text-gray-800">
+            <div class="text-center mb-10 border-b pb-8">
+                <h1 class="text-4xl font-bold text-indigo-600">Semester GPA Report</h1>
+                <p class="text-gray-500 mt-2">Generated on <span id="pdfDate"></span></p>
+                <p class="text-sm text-gray-500 mt-1" id="pdfUrl"></p>
+            </div>
+
+            <div class="grid grid-cols-3 gap-6 mb-10">
+                <div class="text-center">
+                    <div class="text-sm text-gray-500">TOTAL CREDITS</div>
+                    <div id="pdfCredits" class="text-4xl font-bold">27</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-sm text-gray-500">TOTAL POINTS</div>
+                    <div id="pdfPoints" class="text-4xl font-bold">0</div>
+                </div>
+                <div class="text-center">
+                    <div class="text-sm text-gray-500">FINAL GPA</div>
+                    <div id="pdfGPA" class="text-4xl font-bold text-emerald-600">0.00</div>
+                </div>
+            </div>
+
+            <table class="w-full border-collapse">
+                <thead>
+                    <tr class="bg-gray-100">
+                        <th class="text-left py-4 px-6 font-semibold">Course</th>
+                        <th class="text-center py-4 px-6 font-semibold">Credits</th>
+                        <th class="text-center py-4 px-6 font-semibold">Grade</th>
+                        <th class="text-right py-4 px-6 font-semibold">Points</th>
+                    </tr>
+                </thead>
+                <tbody id="pdfTable" class="text-sm"></tbody>
+            </table>
+
+            <div class="mt-12 text-center">
+                <p class="text-emerald-600 font-semibold text-xl">"Keep pushing! Consistent effort leads to outstanding results."</p>
+                <p class="text-xs text-gray-400 mt-8">This report was generated using the GPA Calculator tool.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const courses = [
+            { id: 0, name: "Ada", credits: 4 },
+            { id: 1, name: "Aiml", credits: 4 },
+            { id: 2, name: "Dbms", credits: 4 },
+            { id: 3, name: "Ios", credits: 4 },
+            { id: 4, name: "Sta", credits: 4 },
+            { id: 5, name: "Ese", credits: 3 },
+            { id: 6, name: "Dbms Lab", credits: 1 },
+            { id: 7, name: "Os Lab", credits: 1 },
+            { id: 8, name: "Quantity Apt", credits: 1 },
+            { id: 9, name: "Power Bi", credits: 1 }
+        ];
+
+        const gradeMap = {
+            10: "O", 9: "A+", 8: "A", 7: "B+", 6: "B", 5: "C", 0: "U"
+        };
+
+        function renderCourses() {
+            const container = document.getElementById('coursesContainer');
+            container.innerHTML = '';
+
+            courses.forEach(course => {
+                const div = document.createElement('div');
+                div.className = "flex items-center justify-between bg-white rounded-2xl px-6 py-5 shadow-sm border border-gray-100";
+                div.innerHTML = `
+                    <div class="flex items-center gap-4">
+                        <div class="w-10 h-10 bg-indigo-100 text-indigo-700 rounded-2xl flex items-center justify-center font-bold">${course.credits}</div>
+                        <div class="font-medium text-gray-800">${course.name}</div>
+                    </div>
+                    <select id="grade-${course.id}" onchange="calculateGPA()" 
+                            class="grade-select w-32 bg-white border border-gray-300 rounded-2xl px-5 py-3 text-center font-semibold focus:outline-none">
+                        <option value="10">O (10)</option>
+                        <option value="9">A+ (9)</option>
+                        <option value="8" selected>A (8)</option>
+                        <option value="7">B+ (7)</option>
+                        <option value="6">B (6)</option>
+                        <option value="5">C (5)</option>
+                        <option value="0">U (0)</option>
+                    </select>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function calculateGPA() {
+            let totalCredits = 0;
+            let totalPoints = 0;
+
+            courses.forEach(course => {
+                const gradeEl = document.getElementById(`grade-${course.id}`);
+                const gp = parseFloat(gradeEl.value);
+                totalCredits += course.credits;
+                totalPoints += course.credits * gp;
+            });
+
+            const gpa = (totalPoints / totalCredits).toFixed(2);
+
+            document.getElementById('totalPoints').textContent = totalPoints.toFixed(1);
+            document.getElementById('gpaDisplay').textContent = gpa;
+
+            updateShareableLink(totalPoints, gpa);
+            return { totalCredits, totalPoints, gpa };
+        }
+
+        function updateShareableLink(totalPoints, gpa) {
+            const params = new URLSearchParams();
+            courses.forEach(course => {
+                const gp = document.getElementById(`grade-${course.id}`).value;
+                params.append(`g${course.id}`, gp);
+            });
+            const url = `${window.location.origin}${window.location.pathname}?${params.toString()}`;
+            document.getElementById('shareUrl').textContent = url;
+        }
+
+        function copyLink() {
+            const url = document.getElementById('shareUrl').textContent;
+            if (url) {
+                navigator.clipboard.writeText(url).then(() => {
+                    alert("✅ Shareable link copied to clipboard!");
+                });
+            }
+        }
+
+        function generatePDF() {
+            const result = calculateGPA();
+            
+            // Fill PDF content
+            document.getElementById('pdfDate').textContent = new Date().toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric' });
+            document.getElementById('pdfCredits').textContent = result.totalCredits;
+            document.getElementById('pdfPoints').textContent = result.totalPoints.toFixed(1);
+            document.getElementById('pdfGPA').textContent = result.gpa;
+            document.getElementById('pdfUrl').textContent = document.getElementById('shareUrl').textContent;
+
+            // Table
+            const tbody = document.getElementById('pdfTable');
+            tbody.innerHTML = '';
+            
+            courses.forEach(course => {
+                const gp = parseFloat(document.getElementById(`grade-${course.id}`).value);
+                const gradeLabel = gradeMap[gp] || "U";
+                const points = (course.credits * gp).toFixed(1);
+                
+                const row = document.createElement('tr');
+                row.className = "border-b last:border-none";
+                row.innerHTML = `
+                    <td class="py-4 px-6 font-medium">${course.name}</td>
+                    <td class="py-4 px-6 text-center">${course.credits}</td>
+                    <td class="py-4 px-6 text-center font-semibold">${gradeLabel}</td>
+                    <td class="py-4 px-6 text-right font-medium">${points}</td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            // Generate PDF
+            const element = document.getElementById('pdfContent');
+            const opt = {
+                margin: [0.5, 0.5, 0.5, 0.5],
+                filename: `GPA_Report_${new Date().toISOString().slice(0,10)}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true },
+                jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+            };
+
+            html2pdf().set(opt).from(element).save().then(() => {
+                alert("✅ Your GPA Report has been downloaded successfully!\n\nKeep this PDF for your records and future reference.");
+            });
+        }
+
+        function resetAll() {
+            if (confirm("Reset all grades to A (8)?")) {
+                courses.forEach(course => {
+                    const select = document.getElementById(`grade-${course.id}`);
+                    if (select) select.value = 8;
+                });
+                calculateGPA();
+            }
+        }
+
+        function loadFromURL() {
+            const params = new URLSearchParams(window.location.search);
+            courses.forEach(course => {
+                const val = params.get(`g${course.id}`);
+                if (val) {
+                    const select = document.getElementById(`grade-${course.id}`);
+                    if (select) select.value = val;
+                }
+            });
+            calculateGPA();
+        }
+
+        // Initialize
+        window.onload = function() {
+            renderCourses();
+            loadFromURL();
+            calculateGPA();
+        };
+    </script>
+</body>
+</html>
